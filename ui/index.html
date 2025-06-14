@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paperless-Bigcapital Middleware</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/feather-icons/4.29.0/feather.min.js"></script>
+<link rel="stylesheet" href="/css/style.css">    
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-top">
+                <div>
+                    <h1 class="title">Paperless-Bigcapital Middleware</h1>
+                    <p class="subtitle">Automated document processing and financial integration</p>
+                </div>
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <div id="statusIndicator" class="status-indicator status-stopped">
+                        <div class="pulse pulse-gray"></div>
+                        <span>Stopped</span>
+                    </div>
+                    <button id="controlBtn" class="btn btn-start">
+                        <i data-feather="play"></i>
+                        <span>Start</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <div class="nav-tabs">
+                <button class="nav-tab active" data-tab="dashboard">
+                    <i data-feather="activity"></i>
+                    <span>Dashboard</span>
+                </button>
+                <button class="nav-tab" data-tab="documents">
+                    <i data-feather="file-text"></i>
+                    <span>Documents</span>
+                </button>
+                <button class="nav-tab" data-tab="logs">
+                    <i data-feather="database"></i>
+                    <span>Logs</span>
+                </button>
+                <button class="nav-tab" data-tab="config">
+                    <i data-feather="settings"></i>
+                    <span>Configuration</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Dashboard Tab -->
+        <div id="dashboard" class="tab-content">
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card green">
+                    <div class="stat-header">
+                        <div>
+                            <div class="stat-label">Processed Today</div>
+                            <div id="processedCount" class="stat-value">0</div>
+                        </div>
+                        <i data-feather="check-circle" size="32"></i>
+                    </div>
+                </div>
+                
+                <div class="stat-card red">
+                    <div class="stat-header">
+                        <div>
+                            <div class="stat-label">Errors</div>
+                            <div id="errorCount" class="stat-value">0</div>
+                        </div>
+                        <i data-feather="alert-triangle" size="32"></i>
+                    </div>
+                </div>
+                
+                <div class="stat-card yellow">
+                    <div class="stat-header">
+                        <div>
+                            <div class="stat-label">Pending</div>
+                            <div id="pendingCount" class="stat-value">0</div>
+                        </div>
+                        <i data-feather="clock" size="32"></i>
+                    </div>
+                </div>
+                
+                <div class="stat-card blue">
+                    <div class="stat-header">
+                        <div>
+                            <div class="stat-label">Last Run</div>
+                            <div id="lastRun" class="stat-value" style="font-size: 1.25rem;">Never</div>
+                        </div>
+                        <i data-feather="refresh-cw" size="32"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- System Status -->
+            <div class="card-grid">
+                <div class="card">
+                    <h3 class="card-title">
+                        <i data-feather="server"></i>
+                        System Status
+                    </h3>
+                    <div>
+                        <div class="status-item">
+                            <span>Paperless-NGX</span>
+                            <div class="status-connected">
+                                <i data-feather="wifi" size="16"></i>
+                                <span>Connected</span>
+                            </div>
+                        </div>
+                        <div class="status-item">
+                            <span>Bigcapital</span>
+                            <div class="status-connected">
+                                <i data-feather="wifi" size="16"></i>
+                                <span>Connected</span>
+                            </div>
+                        </div>
+                        <div class="status-item">
+                            <span>Middleware Service</span>
+                            <div id="middlewareStatus" class="status-connected">
+                                <div class="pulse pulse-gray" style="width: 8px; height: 8px;"></div>
+                                <span>Stopped</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3 class="card-title">
+                        <i data-feather="bar-chart-3"></i>
+                        Quick Actions
+                    </h3>
+                    <div>
+                        <button class="quick-action-btn purple" onclick="processNow()">
+                            <i data-feather="refresh-cw" size="16"></i>
+                            <span>Process Now</span>
+                        </button>
+                        <button class="quick-action-btn blue" onclick="exportLogs()">
+                            <i data-feather="download" size="16"></i>
+                            <span>Export Logs</span>
+                        </button>
+                        <button class="quick-action-btn green" onclick="testConnection()">
+                            <i data-feather="upload" size="16"></i>
+                            <span>Test Connection</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Documents Tab -->
+        <div id="documents" class="tab-content hidden">
+            <div class="card">
+                <h3 class="card-title">Recent Documents</h3>
+                <div style="overflow-x: auto;">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Type</th>
+                                <th>Customer</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="documentsTable">
+                            <!-- Documents will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Logs Tab -->
+        <div id="logs" class="tab-content hidden">
+            <div class="card">
+                <h3 class="card-title">Recent Logs</h3>
+                <div id="logsContainer" class="logs-container">
+                    <!-- Logs will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Configuration Tab -->
+        <div id="config" class="tab-content hidden">
+            <!-- Paperless-NGX Config -->
+            <div class="card" style="margin-bottom: 1.5rem;">
+                <h3 class="card-title">Paperless-NGX Configuration</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">API URL</label>
+                        <input id="paperlessUrl" type="text" class="form-input" value="http://localhost:8000" placeholder="Enter Paperless-NGX URL">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">API Token</label>
+                        <div class="input-with-icon">
+                            <input id="paperlessToken" type="password" class="form-input" placeholder="Enter API token">
+                            <i data-feather="eye-off" class="input-icon" onclick="toggleTokenVisibility('paperlessToken', this)"></i>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Invoice Tags</label>
+                        <input id="invoiceTags" type="text" class="form-input" value="invoice,bill,accounts-receivable" placeholder="Comma-separated tags">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Receipt Tags</label>
+                        <input id="receiptTags" type="text" class="form-input" value="receipt,payment" placeholder="Comma-separated tags">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bigcapital Config -->
+            <div class="card" style="margin-bottom: 1.5rem;">
+                <h3 class="card-title">Bigcapital Configuration</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">API URL</label>
+                        <input id="bigcapitalUrl" type="text" class="form-input" value="http://localhost:3000" placeholder="Enter Bigcapital URL">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">API Token</label>
+                        <div class="input-with-icon">
+                            <input id="bigcapitalToken" type="password" class="form-input" placeholder="Enter API token">
+                            <i data-feather="eye-off" class="input-icon" onclick="toggleTokenVisibility('bigcapitalToken', this)"></i>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Default Due Days</label>
+                        <input id="defaultDueDays" type="number" class="form-input" value="30" placeholder="30">
+                    </div>
+                    <div class="form-group">
+                        <div class="checkbox-group">
+                            <input id="autoCreateCustomers" type="checkbox" checked>
+                            <label class="form-label" for="autoCreateCustomers" style="margin-bottom: 0;">Auto-create customers</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Processing Config -->
+            <div class="card" style="margin-bottom: 1.5rem;">
+                <h3 class="card-title">Processing Configuration</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Check Interval (seconds)</label>
+                        <input id="checkInterval" type="number" class="form-input" value="300" placeholder="300">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Log Level</label>
+                        <select id="logLevel" class="form-input">
+                            <option value="DEBUG">DEBUG</option>
+                            <option value="INFO" selected>INFO</option>
+                            <option value="WARNING">WARNING</option>
+                            <option value="ERROR">ERROR</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Processed Tag</label>
+                        <input id="processedTag" type="text" class="form-input" value="bc-processed" placeholder="bc-processed">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Error Tag</label>
+                        <input id="errorTag" type="text" class="form-input" value="bc-error" placeholder="bc-error">
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button class="btn-secondary" onclick="resetConfig()">Reset</button>
+                <button class="btn-primary" onclick="saveConfig()">Save Configuration</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+       // Global state
+        let isRunning = false;
+        let socket = null;
+        let stats = {
+            processed: 0,
+            errors: 0,
+            pending: 0,
+            lastRun: null
+        };
+        let recentLogs = [];
+        let activeTab = 'dashboard';
+
+        // Mock documents data
+        const mockDocuments = [
+            { id: 1234, type: 'Invoice', customer: 'Acme Corp', amount: '$1,250.00', status: 'processed', date: '2024-12-14' },
+            { id: 1235, type: 'Receipt', customer: 'Tech Solutions', amount: '$850.00', status: 'processed', date: '2024-12-14' },
+            { id: 1236, type: 'Invoice', customer: 'Global Inc', amount: '$2,100.00', status: 'error', date: '2024-12-14' },
+            { id: 1237, type: 'Receipt', customer: 'StartupXYZ', amount: '$450.00', status: 'pending', date: '2024-12-14' }
+        ];
+
+        // Configuration object
+        let config = {
+            paperless: {
+                url: 'http://localhost:8000',
+                token: '',
+                invoice_tags: 'invoice,bill,accounts-receivable',
+                receipt_tags: 'receipt,payment'
+            },
+            bigcapital: {
+                url: 'http://localhost:3000',
+                token: '',
+                auto_create_customers: true,
+                default_due_days: 30
+            },
+            processing: {
+                processed_tag: 'bc-processed',
+                error_tag: 'bc-error',
+                check_interval: 300,
+                log_level: 'INFO'
+            }
+        };
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+        });
+
+        function initializeApp() {
+            setupEventListeners();
+            initializeSocket();
+            loadMockData();
+            startDataUpdateInterval();
+            loadConfigFromForm();
+            feather.replace();
+        }
+
+        function setupEventListeners() {
+            // Tab navigation
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    switchTab(this.dataset.tab);
+                });
+            });
+
+            // Control button
+            document.getElementById('controlBtn').addEventListener('click', toggleService);
+        }
+
+        function initializeSocket() {
+            try {
+                socket = io();
+                
+                socket.on('connect', function() {
+                    console.log('Connected to server');
+                });
+
+                socket.on('stats_update', function(data) {
+                    updateStats(data);
+                });
+
+                socket.on('log_update', function(data) {
+                    addLogEntry(data);
+                });
+
+                socket.on('service_status', function(data) {
+                    updateServiceStatus(data.running);
+                });
+            } catch (error) {
+                console.log('Socket.IO not available, using mock data');
+            }
+        }
+
+        function loadMockData() {
+            updateDocumentsTable();
+            updateLogsDisplay();
+            
+            // Add some initial mock logs
+            const mockLogs = [
+                { timestamp: new Date().toLocaleTimeString(), level: 'INFO', message: 'Service initialized successfully', id: Date.now() },
+                { timestamp: new Date().toLocaleTimeString(), level: 'INFO', message: 'Connected to Paperless-NGX API', id: Date.now() + 1 },
+                { timestamp: new Date().toLocaleTimeString(), level: 'INFO', message: 'Connected to Bigcapital API', id: Date.now() + 2 }
+            ];
+            
+            mockLogs.forEach(log => {
+                recentLogs.unshift(log);
+            });
+            
+            updateLogsDisplay();
+        }
+
+        function startDataUpdateInterval() {
+            // Update stats and logs periodically
+            setInterval(() => {
+                if (isRunning) {
+                    // Mock data updates
+                    stats.processed += Math.floor(Math.random() * 2);
+                    stats.errors += (Math.random() > 0.9 ? 1 : 0);
+                    stats.pending = Math.floor(Math.random() * 10);
+                    stats.lastRun = new Date().toLocaleTimeString();
+                    
+                    updateStatsDisplay();
+                    
+                    // Add mock log entries
+                    if (recentLogs.length < 50 && Math.random() > 0.7) {
+                        const logTypes = ['INFO', 'WARNING', 'ERROR'];
+                        const messages = [
+                            'Processing document ID: ' + Math.floor(Math.random() * 9999),
+                            'Successfully created invoice in Bigcapital',
+                            'Document tagged as processed',
+                            'Failed to extract data from document',
+                            'API connection successful',
+                            'Customer created automatically'
+                        ];
+                        
+                        const newLog = {
+                            timestamp: new Date().toLocaleTimeString(),
+                            level: logTypes[Math.floor(Math.random() * logTypes.length)],
+                            message: messages[Math.floor(Math.random() * messages.length)],
+                            id: Date.now()
+                        };
+                        
+                        recentLogs.unshift(newLog);
+                        recentLogs = recentLogs.slice(0, 50); // Keep only last 50 logs
+                        updateLogsDisplay();
+                    }
+                }
+            }, 3000);
+        }
+
+        function switchTab(tabName) {
+            // Update active tab
+            activeTab = tabName;
+            
+            // Update tab buttons
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+            
+            // Show/hide content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.add('hidden');
+            });
+            document.getElementById(tabName).classList.remove('hidden');
+            
+            // Refresh icons
+            feather.replace();
+        }
+
+        function toggleService() {
+            isRunning = !isRunning;
+            updateServiceStatus(isRunning);
+            
+            // Send to server if socket is available
+            if (socket) {
+                socket.emit('toggle_service', { running: isRunning });
+            }
+        }
+
+        function updateServiceStatus(running) {
+            isRunning = running;
+            const statusIndicator = document.getElementById('statusIndicator');
+            const controlBtn = document.getElementById('controlBtn');
+            const middlewareStatus = document.getElementById('middlewareStatus');
+            
+            if (running) {
+                statusIndicator.className = 'status-indicator status-running';
+                statusIndicator.innerHTML = '<div class="pulse pulse-green"></div><span>Running</span>';
+                
+                controlBtn.className = 'btn btn-stop';
+                controlBtn.innerHTML = '<i data-feather="pause"></i><span>Stop</span>';
+                
+                if (middlewareStatus) {
+                    middlewareStatus.innerHTML = '<div class="pulse pulse-green" style="width: 8px; height: 8px;"></div><span>Active</span>';
+                    middlewareStatus.className = 'status-connected';
+                }
+            } else {
+                statusIndicator.className = 'status-indicator status-stopped';
+                statusIndicator.innerHTML = '<div class="pulse pulse-gray"></div><span>Stopped</span>';
+                
+                controlBtn.className = 'btn btn-start';
+                controlBtn.innerHTML = '<i data-feather="play"></i><span>Start</span>';
+                
+                if (middlewareStatus) {
+                    middlewareStatus.innerHTML = '<div class="pulse pulse-gray" style="width: 8px; height: 8px;"></div><span>Stopped</span>';
+                    middlewareStatus.className = 'status-disconnected';
+                }
+            }
+            
+            feather.replace();
+        }
+
+        function updateStats(data) {
+            stats = { ...stats, ...data };
+            updateStatsDisplay();
+        }
+
+        function updateStatsDisplay() {
+            document.getElementById('processedCount').textContent = stats.processed;
+            document.getElementById('errorCount').textContent = stats.errors;
+            document.getElementById('pendingCount').textContent = stats.pending;
+            document.getElementById('lastRun').textContent = stats.lastRun || 'Never';
+        }
+
+        function addLogEntry(logData) {
+            recentLogs.unshift(logData);
+            recentLogs = recentLogs.slice(0, 50); // Keep only last 50 logs
+            updateLogsDisplay();
+        }
+
+        function updateLogsDisplay() {
+            const logsContainer = document.getElementById('logsContainer');
+            if (!logsContainer) return;
+            
+            logsContainer.innerHTML = '';
+            
+            recentLogs.forEach(log => {
+                const logElement = document.createElement('div');
+                logElement.className = 'log-entry';
+                
+                let levelClass = '';
+                switch (log.level) {
+                    case 'ERROR':
+                        levelClass = 'log-error';
+                        break;
+                    case 'WARNING':
+                        levelClass = 'log-warning';
+                        break;
+                    default:
+                        levelClass = 'log-info';
+                }
+                
+                logElement.innerHTML = `
+                    <span class="log-timestamp">${log.timestamp}</span>
+                    <span class="log-level ${levelClass}">${log.level}</span>
+                    <span class="log-message">${log.message}</span>
+                `;
+                
+                logsContainer.appendChild(logElement);
+            });
+        }
+
+        function updateDocumentsTable() {
+            const tableBody = document.getElementById('documentsTable');
+            if (!tableBody) return;
+            
+            tableBody.innerHTML = '';
+            
+            mockDocuments.forEach(doc => {
+                const row = document.createElement('tr');
+                
+                let statusClass = '';
+                switch (doc.status) {
+                    case 'processed':
+                        statusClass = 'status-processed';
+                        break;
+                    case 'error':
+                        statusClass = 'status-error';
+                        break;
+                    case 'pending':
+                        statusClass = 'status-pending';
+                        break;
+                }
+                
+                row.innerHTML = `
+                    <td>${doc.id}</td>
+                    <td>${doc.type}</td>
+                    <td>${doc.customer}</td>
+                    <td class="amount">${doc.amount}</td>
+                    <td><span class="status-badge ${statusClass}">${doc.status}</span></td>
+                    <td>${doc.date}</td>
+                `;
+                
+                tableBody.appendChild(row);
+            });
+        }
+
+        function loadConfigFromForm() {
+            // Load config values into form fields
+            document.getElementById('paperlessUrl').value = config.paperless.url;
+            document.getElementById('paperlessToken').value = config.paperless.token;
+            document.getElementById('invoiceTags').value = config.paperless.invoice_tags;
+            document.getElementById('receiptTags').value = config.paperless.receipt_tags;
+            
+            document.getElementById('bigcapitalUrl').value = config.bigcapital.url;
+            document.getElementById('bigcapitalToken').value = config.bigcapital.token;
+            document.getElementById('defaultDueDays').value = config.bigcapital.default_due_days;
+            document.getElementById('autoCreateCustomers').checked = config.bigcapital.auto_create_customers;
+            
+            document.getElementById('checkInterval').value = config.processing.check_interval;
+            document.getElementById('logLevel').value = config.processing.log_level;
+            document.getElementById('processedTag').value = config.processing.processed_tag;
+            document.getElementById('errorTag').value = config.processing.error_tag;
+        }
+
+        function saveConfig() {
+            // Collect form data
+            config.paperless.url = document.getElementById('paperlessUrl').value;
+            config.paperless.token = document.getElementById('paperlessToken').value;
+            config.paperless.invoice_tags = document.getElementById('invoiceTags').value;
+            config.paperless.receipt_tags = document.getElementById('receiptTags').value;
+            
+            config.bigcapital.url = document.getElementById('bigcapitalUrl').value;
+            config.bigcapital.token = document.getElementById('bigcapitalToken').value;
+            config.bigcapital.default_due_days = parseInt(document.getElementById('defaultDueDays').value);
+            config.bigcapital.auto_create_customers = document.getElementById('autoCreateCustomers').checked;
+            
+            config.processing.check_interval = parseInt(document.getElementById('checkInterval').value);
+            config.processing.log_level = document.getElementById('logLevel').value;
+            config.processing.processed_tag = document.getElementById('processedTag').value;
+            config.processing.error_tag = document.getElementById('errorTag').value;
+            
+            // Send to server if socket is available
+            if (socket) {
+                socket.emit('save_config', config);
+            }
+            
+            // Show success message
+            alert('Configuration saved successfully!');
+            
+            // Add log entry
+            const logEntry = {
+                timestamp: new Date().toLocaleTimeString(),
+                level: 'INFO',
+                message: 'Configuration updated successfully',
+                id: Date.now()
+            };
+            addLogEntry(logEntry);
+        }
+
+        function resetConfig() {
+            if (confirm('Are you sure you want to reset the configuration to defaults?')) {
+                // Reset to default values
+                config = {
+                    paperless: {
+                        url: 'http://localhost:8000',
+                        token: '',
+                        invoice_tags: 'invoice,bill,accounts-receivable',
+                        receipt_tags: 'receipt,payment'
+                    },
+                    bigcapital: {
+                        url: 'http://localhost:3000',
+                        token: '',
+                        auto_create_customers: true,
+                        default_due_days: 30
+                    },
+                    processing: {
+                        processed_tag: 'bc-processed',
+                        error_tag: 'bc-error',
+                        check_interval: 300,
+                        log_level: 'INFO'
+                    }
+                };
+                
+                loadConfigFromForm();
+                
+                // Add log entry
+                const logEntry = {
+                    timestamp: new Date().toLocaleTimeString(),
+                    level: 'INFO',
+                    message: 'Configuration reset to defaults',
+                    id: Date.now()
+                };
+                addLogEntry(logEntry);
+            }
+        }
+
+        function toggleTokenVisibility(inputId, iconElement) {
+            const input = document.getElementById(inputId);
+            const isPassword = input.type === 'password';
+            
+            input.type = isPassword ? 'text' : 'password';
+            iconElement.setAttribute('data-feather', isPassword ? 'eye' : 'eye-off');
+            feather.replace();
+        }
+
+        // Quick action functions
+        function processNow() {
+            if (socket) {
+                socket.emit('process_now');
+            }
+            
+            // Add log entry
+            const logEntry = {
+                timestamp: new Date().toLocaleTimeString(),
+                level: 'INFO',
+                message: 'Manual processing triggered',
+                id: Date.now()
+            };
+            addLogEntry(logEntry);
+            
+            alert('Processing started manually');
+        }
+
+        function exportLogs() {
+            // Create CSV content
+            const csvContent = 'Timestamp,Level,Message\n' + 
+                recentLogs.map(log => `"${log.timestamp}","${log.level}","${log.message}"`).join('\n');
+            
+            // Create and trigger download
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `middleware-logs-${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            
+            // Add log entry
+            const logEntry = {
+                timestamp: new Date().toLocaleTimeString(),
+                level: 'INFO',
+                message: 'Logs exported successfully',
+                id: Date.now()
+            };
+            addLogEntry(logEntry);
+        }
+
+        function testConnection() {
+            if (socket) {
+                socket.emit('test_connection');
+            }
+            
+            // Mock connection test
+            setTimeout(() => {
+                const success = Math.random() > 0.3; // 70% success rate
+                const message = success ? 
+                    'Connection test successful - all services responding' : 
+                    'Connection test failed - check configuration';
+                
+                const logEntry = {
+                    timestamp: new Date().toLocaleTimeString(),
+                    level: success ? 'INFO' : 'ERROR',
+                    message: message,
+                    id: Date.now()
+                };
+                addLogEntry(logEntry);
+                
+                alert(message);
+            }, 1000);
+        }
+
+        // Additional utility functions
+        function formatDateTime(date) {
+            return new Date(date).toLocaleString();
+        }
+
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD'
+            }).format(amount);
+        }
+
+        // Error handling
+        window.addEventListener('error', function(event) {
+            const logEntry = {
+                timestamp: new Date().toLocaleTimeString(),
+                level: 'ERROR',
+                message: `JavaScript Error: ${event.message}`,
+                id: Date.now()
+            };
+            addLogEntry(logEntry);
+        });
+
+        // Handle socket connection errors
+        if (socket) {
+            socket.on('connect_error', function(error) {
+                const logEntry = {
+                    timestamp: new Date().toLocaleTimeString(),
+                    level: 'ERROR',
+                    message: 'Socket connection failed - using mock data',
+                    id: Date.now()
+                };
+                addLogEntry(logEntry);
+            });
+        }
+
+  </script>
+
+  </body></html>
