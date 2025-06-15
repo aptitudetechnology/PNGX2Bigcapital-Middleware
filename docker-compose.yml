@@ -1,0 +1,122 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: middleware-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: middleware_db
+      POSTGRES_USER: middleware_user
+      POSTGRES_PASSWORD: middleware_password
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    networks:
+      - paperless-bigcapital-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U middleware_user -d middleware_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Paperless-Bigcapital Middleware
+  paperless-bigcapital-middleware:
+    build: .
+    container_name: paperless-bigcapital-middleware
+    restart: unless-stopped
+    volumes:
+      - ./config.ini:/app/config.ini:ro
+      - ./logs:/app/logs
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=middleware_db
+      - DB_USER=middleware_user
+      - DB_PASSWORD=middleware_password
+    ports:
+      - "5000:5000"
+    networks:
+      - paperless-bigcapital-net
+    depends_on:
+      db:
+        condition: service_healthy
+      paperless-ngx:
+        condition: service_started
+      bigcapital:
+        condition: service_started
+    command: ["python", "middleware.py", "--config", "/app/config.ini"]
+
+  # Example Paperless-NGX service (adjust to your setup)
+  paperless-ngx:
+    image: ghcr.io/paperless-ngx/paperless-ngx:latest
+    container_name: paperless-ngx
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    networks:
+      - paperless-bigcapital-net
+    volumes:
+      - paperless_data:/usr/src/paperless/data
+      - paperless_media:/usr/src/paperless/media
+    environment:
+      - PAPERLESS_REDIS=redis://redis:6379
+      - PAPERLESS_DBHOST=paperless-db
+      - PAPERLESS_DBNAME=paperless
+      - PAPERLESS_DBUSER=paperless
+      - PAPERLESS_DBPASS=paperless
+    depends_on:
+      - paperless-db
+      - redis
+
+  # Paperless-NGX Database
+  paperless-db:
+    image: postgres:15-alpine
+    container_name: paperless-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: paperless
+      POSTGRES_USER: paperless
+      POSTGRES_PASSWORD: paperless
+    volumes:
+      - paperless_postgres_data:/var/lib/postgresql/data
+    networks:
+      - paperless-bigcapital-net
+
+  # Redis for Paperless-NGX
+  redis:
+    image: redis:7-alpine
+    container_name: paperless-redis
+    restart: unless-stopped
+    networks:
+      - paperless-bigcapital-net
+
+  # Example Bigcapital service (adjust to your setup)
+  bigcapital:
+    image: bigcapital/bigcapital:latest
+    container_name: bigcapital
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    networks:
+      - paperless-bigcapital-net
+    volumes:
+      - bigcapital_data:/app/data
+    environment:
+      - NODE_ENV=production
+
+networks:
+  paperless-bigcapital-net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  paperless_data:
+  paperless_media:
+  paperless_postgres_data:
+  bigcapital_data:
