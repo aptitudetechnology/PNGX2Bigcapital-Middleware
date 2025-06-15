@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Document {{ document.id }} - Paperless-Bigcapital Middleware</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/feather-icons/4.29.0/feather.min.js"></script>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        /* Minimal inline styles for document editor specific elements */
+        .document-editor {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 1.5rem;
+            min-height: calc(100vh - 100px);
+        }
+        
+        .document-viewer {
+            background: white;
+            border-radius: 8px;
+            padding: 1rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border: 1px solid #e5e7eb;
+        }
+        
+        .document-form {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border: 1px solid #e5e7eb;
+            height: fit-content;
+        }
+        
+        .document-placeholder {
+            background: #f3f4f6;
+            border: 2px dashed #d1d5db;
+            border-radius: 8px;
+            padding: 3rem;
+            text-align: center;
+            color: #6b7280;
+            min-height: 500px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .document-meta {
+            background: #f9fafb;
+            border-radius: 6px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .meta-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: #6b7280;
+            margin-bottom: 0.25rem;
+        }
+        
+        .meta-value {
+            font-size: 0.875rem;
+            color: #374151;
+        }
+        
+        .save-buttons {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e5e7eb;
+        }
+        
+        .btn-save {
+            background: #059669;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .btn-save:hover {
+            background: #047857;
+        }
+        
+        .btn-cancel {
+            background: #6b7280;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .btn-cancel:hover {
+            background: #4b5563;
+        }
+        
+        .form-section {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-section h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .notification {
+            padding: 0.75rem 1rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            display: none;
+        }
+        
+        .notification.success {
+            background: #d1fae5;
+            border: 1px solid #a7f3d0;
+            color: #065f46;
+        }
+        
+        .notification.error {
+            background: #fee2e2;
+            border: 1px solid #fecaca;
+            color: #991b1b;
+        }
+        
+        @media (max-width: 1024px) {
+            .document-editor {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header" style="margin-bottom: 1.5rem;">
+            <div class="header-top">
+                <div>
+                    <h1 class="title">Edit Document #{{ document.paperless_id }}</h1>
+                    <p class="subtitle">{{ document.title }}</p>
+                </div>
+                <button onclick="window.close()" class="btn btn-secondary">
+                    <i data-feather="x"></i>
+                    <span>Close</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Notification Area -->
+        <div id="notification" class="notification"></div>
+
+        <!-- Document Editor Grid -->
+        <div class="document-editor">
+            <!-- Document Viewer -->
+            <div class="document-viewer">
+                <h3 class="card-title" style="margin-bottom: 1rem;">
+                    <i data-feather="file-text"></i>
+                    Document Preview
+                </h3>
+                
+                <!-- Document Metadata -->
+                <div class="document-meta">
+                    <div class="meta-grid">
+                        <div class="meta-item">
+                            <span class="meta-label">Document ID</span>
+                            <span class="meta-value">#{{ document.paperless_id }}</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">File Type</span>
+                            <span class="meta-value">{{ document.file_type|upper or 'PDF' }}</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">Created Date</span>
+                            <span class="meta-value">{{ document.created_date[:10] if document.created_date else 'Unknown' }}</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">Last Modified</span>
+                            <span class="meta-value">{{ document.modified_date[:10] if document.modified_date else 'Unknown' }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Document Preview Area -->
+                <div class="document-placeholder">
+                    <i data-feather="file-text" size="64" style="color: #9ca3af; margin-bottom: 1rem;"></i>
+                    <h4 style="color: #6b7280; margin-bottom: 0.5rem;">Document Preview</h4>
+                    <p style="color: #9ca3af; font-size: 0.875rem;">
+                        {% if document.file_type == 'pdf' %}
+                        PDF document preview would be displayed here
+                        {% else %}
+                        Image document preview would be displayed here
+                        {% endif %}
+                    </p>
+                    <p style="color: #9ca3af; font-size: 0.75rem; margin-top: 1rem;">
+                        File: {{ document.file_path or 'No file path' }}
+                    </p>
+                </div>
+            </div>
+
+            <!-- Document Form -->
+            <div class="document-form">
+                <h3 class="card-title" style="margin-bottom: 1.5rem;">
+                    <i data-feather="edit-3"></i>
+                    Document Details
+                </h3>
+
+                <form id="documentForm">
+                    <!-- Document Type Section -->
+                    <div class="form-section">
+                        <h4>
+                            <i data-feather="tag"></i>
+                            Document Type
+                        </h4>
+                        <div class="form-group">
+                            <label class="form-label">Type</label>
+                            <select id="documentType" class="form-input" required>
+                                <option value="invoice" {{ 'selected' if document.document_type == 'invoice' else '' }}>Invoice</option>
+                                <option value="invoice_ar" {{ 'selected' if document.document_type == 'invoice_ar' else '' }}>Invoice AR</option>
+                                <option value="receipt" {{ 'selected' if document.document_type == 'receipt' else '' }}>Receipt</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Customer Information -->
+                    <div class="form-section">
+                        <h4>
+                            <i data-feather="user"></i>
+                            Customer Information
+                        </h4>
+                        <div class="form-group">
+                            <label class="form-label">Customer Name</label>
+                            <input type="text" id="customerName" class="form-input" 
+                                   value="{{ document.customer_name or '' }}" 
+                                   placeholder="Enter customer name">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Amount</label>
+                            <input type="number" id="amount" class="form-input" step="0.01"
+                                   value="{{ document.amount or '' }}" 
+                                   placeholder="0.00">
+                        </div>
+                    </div>
+
+                    <!-- Bigcapital Integration -->
+                    <div class="form-section">
+                        <h4>
+                            <i data-feather="dollar-sign"></i>
+                            Bigcapital Settings
+                        </h4>
+                        <div class="form-group">
+                            <label class="form-label">Account Code</label>
+                            <select id="accountCode" class="form-input">
+                                <option value="">Select account code</option>
+                                {% for code in account_codes %}
+                                <option value="{{ code[0] }}" 
+                                        {{ 'selected' if document.bigcapital_account_code == code[0] else '' }}>
+                                    {{ code[0] }} - {{ code[1] }} ({{ code[2]|title }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Customer ID (Bigcapital)</label>
+                            <input type="number" id="bigcapitalCustomerId" class="form-input"
+                                   value="{{ document.bigcapital_customer_id or '' }}" 
+                                   placeholder="Leave empty for auto-assignment">
+                        </div>
+                    </div>
+
+                    <!-- Tags and Notes -->
+                    <div class="form-section">
+                        <h4>
+                            <i data-feather="hash"></i>
+                            Tags & Notes
+                        </h4>
+                        <div class="form-group">
+                            <label class="form-label">Tags</label>
+                            <input type="text" id="tags" class="form-input"
+                                   value="{{ document.tags or '' }}" 
+                                   placeholder="Comma-separated tags">
+                            <small style="color: #6b7280; font-size: 0.75rem;">
+                                Separate multiple tags with commas
+                            </small>
+                        </div>
+                    </div>
+
+                    <!-- Status Information (Read-only) -->
+                    <div class="form-section">
+                        <h4>
+                            <i data-feather="info"></i>
+                            Status Information
+                        </h4>
+                        <div class="form-group">
+                            <label class="form-label">Current Status</label>
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                {% if document.status == 'processed' %}
+                                <span class="status-badge status-processed">{{ document.status|title }}</span>
+                                {% elif document.status == 'error' %}
+                                <span class="status-badge status-error">{{ document.status|title }}</span>
+                                {% else %}
+                                <span class="status-badge status-pending">{{ document.status|title }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="save-buttons">
+                        <button type="submit" class="btn-save">
+                            <i data-feather="save"></i>
+                            <span>Save Changes</span>
+                        </button>
+                        <button type="button" class="btn-cancel" onclick="window.close()">
+                            <i data-feather="x"></i>
+                            <span>Cancel</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize the document editor
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeEditor();
+        });
+
+        function initializeEditor() {
+            feather.replace();
+            setupFormHandlers();
+        }
+
+        function setupFormHandlers() {
+            const form = document.getElementById('documentForm');
+            form.addEventListener('submit', handleFormSubmit);
+        }
+
+        async function handleFormSubmit(event) {
+            event.preventDefault();
+            
+            const formData = {
+                document_type: document.getElementById('documentType').value,
+                customer_name: document.getElementById('customerName').value,
+                amount: parseFloat(document.getElementById('amount').value) || null,
+                bigcapital_account_code: document.getElementById('accountCode').value || null,
+                bigcapital_customer_id: parseInt(document.getElementById('bigcapitalCustomerId').value) || null,
+                tags: document.getElementById('tags').value
+            };
+
+            try {
+                const response = await fetch(`/api/document/{{ document.id }}/save`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showNotification('Document updated successfully!', 'success');
+                    
+                    // Optionally close the window after a delay
+                    setTimeout(() => {
+                        if (confirm('Document saved successfully. Close this window?')) {
+                            window.close();
+                        }
+                    }, 1500);
+                } else {
+                    showNotification('Error: ' + (result.error || 'Failed to save document'), 'error');
+                }
+            } catch (error) {
+                console.error('Save error:', error);
+                showNotification('Error: Failed to communicate with server', 'error');
+            }
+        }
+
+        function showNotification(message, type) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${type}`;
+            notification.style.display = 'block';
+
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 5000);
+        }
+
+        // Handle window beforeunload to warn about unsaved changes
+        let formChanged = false;
+        
+        document.addEventListener('input', function() {
+            formChanged = true;
+        });
+
+        window.addEventListener('beforeunload', function(event) {
+            if (formChanged) {
+                event.preventDefault();
+                event.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+                return event.returnValue;
+            }
+        });
+
+        // Reset form changed flag when form is submitted
+        document.getElementById('documentForm').addEventListener('submit', function() {
+            formChanged = false;
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(event) {
+            // Ctrl+S or Cmd+S to save
+            if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+                event.preventDefault();
+                document.getElementById('documentForm').dispatchEvent(new Event('submit'));
+            }
+            
+            // Escape to close
+            if (event.key === 'Escape') {
+                if (confirm('Close this window?')) {
+                    window.close();
+                }
+            }
+        });
+
+        // Auto-save draft functionality (optional)
+        let autoSaveTimeout;
+        document.addEventListener('input', function() {
+            clearTimeout(autoSaveTimeout);
+            autoSaveTimeout = setTimeout(function() {
+                // Could implement auto-save draft here
+                console.log('Auto-save draft (not implemented)');
+            }, 30000); // Auto-save after 30 seconds of inactivity
+        });
+    </script>
+
+</body>
+</html>
