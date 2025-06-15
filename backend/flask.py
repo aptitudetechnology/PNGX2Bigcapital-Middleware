@@ -1,3 +1,13 @@
+# Add a Flask/FastAPI web server to your middleware
+# Create REST API endpoints for:
+
+# Status monitoring (/api/status)
+# Configuration management (/api/config)
+# Log streaming (/api/logs)
+# Document listing (/api/documents)
+# Control actions (/api/start, /api/stop)
+
+
 from flask import Flask, render_template, jsonify, request, Response
 from flask_socketio import SocketIO, emit
 import json
