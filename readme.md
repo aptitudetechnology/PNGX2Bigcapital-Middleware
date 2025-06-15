@@ -2,16 +2,6 @@
 
 A robust middleware solution that automatically imports financial documents (invoices and receipts) from Paperless-NGX into Bigcapital, streamlining your bookkeeping workflow.
 
-## Features
-
-- **Automated Document Processing**: Monitors Paperless-NGX for new invoices and receipts
-- **Intelligent Data Extraction**: Uses OCR content to extract key financial data
-- **Customer Management**: Automatically creates customers in Bigcapital if they don't exist
-- **Error Handling**: Comprehensive error handling with document tagging for failed processes
-- **Flexible Configuration**: Easy configuration via INI file
-- **Docker Support**: Ready-to-deploy Docker container
-- **Logging**: Detailed logging for monitoring and troubleshooting
-- **Continuous Processing**: Can run as a service or one-time batch process
 
 ## Prerequisites
 
@@ -20,253 +10,328 @@ A robust middleware solution that automatically imports financial documents (inv
 - Access to Paperless-NGX instance with API token
 - Access to Bigcapital instance with API token
 
-## Quick Start
+# Paperless-NGX to Bigcapital Middleware
 
-### Method 1: Docker Deployment (Recommended)
+A middleware service that extracts data from documents in Paperless-NGX and syncs them to Bigcapital for accounting purposes. The extracted document data is stored in a PostgreSQL database for persistence and analysis.
 
-1. **Clone or download the middleware files**
-2. **Configure your settings**:
-   ```bash
-   cp config.ini.template config.ini
-   # Edit config.ini with your API endpoints and tokens
-   ```
+## Features (planned)
 
-3. **Build and run with Docker Compose**:
-   ```bash
-   docker-compose up -d
-   ```
+- 🔄 Automatic document processing from Paperless-NGX
+- 💾 PostgreSQL database storage for extracted data
+- 🏷️ Tag-based document filtering and status tracking
+- 🌐 Web interface for monitoring and management
+- 🐳 Full Docker containerization
+- 📊 Processing statistics and error tracking
+- 🔗 Seamless Bigcapital integration 
 
-### Method 2: Direct Python Installation
+## Architecture
 
-1. **Create virtual environment**:
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
+```
+Paperless-NGX → Middleware → PostgreSQL Database → Bigcapital
+```
 
-2. **Install dependencies**:
-   ```bash
-   pip install requests configparser
-   ```
+The middleware polls Paperless-NGX for new documents, extracts relevant data, stores it in PostgreSQL, and then creates corresponding entries in Bigcapital.
 
-3. **Configure settings**:
-   ```bash
-   cp config.ini.template config.ini
-   # Edit config.ini with your settings
-   ```
 
-4. **Run the middleware**:
-   ```bash
-   # Run once
-   python middleware.py --once
-   
-   # Run continuously
-   python middleware.py
-   ```
 
-## Configuration
+## Quick Start with Docker (Recommended)
 
-### API Tokens
+### 1. Clone and Setup
 
-**Paperless-NGX Token**:
-1. Log into your Paperless-NGX instance
-2. Go to Settings → API Tokens
-3. Create a new token and copy it to your config file
-
-**Bigcapital Token**:
-1. Log into your Bigcapital instance
-2. Go to Settings → API & Integrations
-3. Generate an API token and copy it to your config file
-
-### Document Tagging Strategy
-
-The middleware uses tags to identify and track documents:
-
-**Identification Tags** (configure in `config.ini`):
-- `invoice_tags`: Tags that identify invoices (e.g., "invoice", "bill", "accounts-receivable")
-- `receipt_tags`: Tags that identify receipts (e.g., "receipt", "payment")
-
-**Processing Tags** (automatically applied):
-- `bc-processed`: Applied to successfully processed documents
-- `bc-error`: Applied to documents that failed processing
-
-### Example Workflow
-
-1. **Document Upload**: Upload an invoice to Paperless-NGX
-2. **Tagging**: Tag the document with "invoice" 
-3. **Processing**: Middleware detects the tagged document
-4. **Extraction**: OCR content is parsed for invoice data
-5. **Import**: Invoice is created in Bigcapital
-6. **Marking**: Document is tagged as "bc-processed"
-
-## Data Extraction
-
-The middleware extracts the following data points:
-
-### For Invoices:
-- Invoice number
-- Invoice date
-- Due date
-- Customer name
-- Line items (description, quantity, rate)
-- Total amount
-- Tax amount (if present)
-
-### For Receipts:
-- Receipt number
-- Receipt date
-- Payer name
-- Payment amount
-- Payment method
-
-## Error Handling
-
-Documents that fail processing are tagged with `bc-error` and logged for manual review. Common failure scenarios:
-
-- Missing required data (customer name, amount, date)
-- API connection issues
-- Invalid data formats
-- Customer creation failures
-
-Check the logs (`middleware.log`) for detailed error information.
-
-## Monitoring
-
-### Log Files
-- `middleware.log`: Main application log
-- Docker logs: `docker-compose logs -f paperless-bigcapital-middleware`
-
-### Health Checks
-The Docker container includes health checks. Monitor status with:
 ```bash
+git clone <your-repo-url>
+cd paperless-bigcapital-middleware
+```
+
+### 2. Configure Environment
+
+Copy the example environment file and configure your settings:
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` with your actual values:
+
+```bash
+# Paperless-NGX Configuration
+PAPERLESS_URL=http://paperless-ngx:8000
+PAPERLESS_TOKEN=your-paperless-ngx-api-token
+
+# Bigcapital Configuration  
+BIGCAPITAL_URL=http://bigcapital:3000
+BIGCAPITAL_TOKEN=your-bigcapital-api-token
+
+# Database Configuration (defaults are fine for Docker setup)
+DB_HOST=db
+DB_PORT=5432
+DB_NAME=middleware_db
+DB_USER=middleware_user
+DB_PASSWORD=middleware_password
+```
+
+### 3. Configure Application Settings
+
+Edit `config.ini` to match your setup:
+
+```bash
+cp config.ini.example config.ini  # if you have a template
+# OR edit the existing config.ini
+nano config.ini
+```
+
+Key settings to update:
+- Paperless-NGX URL and API token
+- Bigcapital URL and API token
+- Document filtering tags
+- Processing intervals
+
+### 4. Place Your Database Schema
+
+Place your SQL initialization files in the `db/` directory:
+
+```bash
+mkdir -p db/
+# Copy your .sql files to the db/ directory
+cp your-schema.sql db/
+cp your-initial-data.sql db/
+```
+
+### 5. Build and Run
+
+```bash
+# Build and start all services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f paperless-bigcapital-middleware
+
+# Check service status
 docker-compose ps
 ```
 
-## Advanced Configuration
+### 6. Verify Installation
 
-### Custom OCR Patterns
+Check that all services are running:
 
-You can modify the `DocumentProcessor` class to add custom regex patterns for your specific document formats:
-
-```python
-# Example: Add custom invoice number pattern
-invoice_patterns = [
-    r'invoice\s*#?\s*:?\s*([A-Z0-9\-]+)',
-    r'your-custom-pattern-here'
-]
-```
-
-### Customer Matching
-
-The middleware matches customers by exact name comparison. For better matching, consider:
-
-1. Standardizing customer names in Paperless-NGX correspondents
-2. Using consistent naming conventions
-3. Pre-creating customers in Bigcapital
-
-### Scheduling
-
-For production use, consider running the middleware:
-
-**As a Service**:
 ```bash
-# Using systemd (Linux)
-sudo systemctl enable paperless-bigcapital-middleware
-sudo systemctl start paperless-bigcapital-middleware
+# Check middleware health
+curl http://localhost:5000/health
+
+# Check database connection
+docker-compose exec db psql -U middleware_user -d middleware_db -c "SELECT version();"
+
+# View middleware logs
+docker-compose logs paperless-bigcapital-middleware
 ```
 
-**With Cron** (for periodic processing):
+## Local Development Setup
+
+### 1. Install Dependencies
+
 ```bash
-# Run every 5 minutes
-*/5 * * * * /path/to/middleware/run.sh --once
+# Create and activate virtual environment
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install Python dependencies
+pip install -r requirements.txt
 ```
 
-## Troubleshooting
+### 2. Setup PostgreSQL
+
+Install PostgreSQL locally or use Docker:
+
+```bash
+# Using Docker for PostgreSQL only
+docker run -d \
+  --name middleware-postgres \
+  -e POSTGRES_DB=middleware_db \
+  -e POSTGRES_USER=middleware_user \
+  -e POSTGRES_PASSWORD=middleware_password \
+  -p 5432:5432 \
+  postgres:15-alpine
+```
+
+### 3. Initialize Database
+
+```bash
+# Run SQL files manually
+psql -h localhost -U middleware_user -d middleware_db -f db/schema.sql
+# Or use the provided script
+./init.sh --setup-db-only
+```
+
+### 4. Configure and Run
+
+```bash
+# Copy and edit configuration
+cp config.ini.example config.ini
+nano config.ini
+
+# Run the middleware
+./run.sh
+```
+
+## Configuration Reference
+
+### config.ini Sections
+
+#### [paperless]
+- `url`: Paperless-NGX instance URL
+- `token`: API token for Paperless-NGX
+- `invoice_tags`: Tags that identify invoice documents
+- `receipt_tags`: Tags that identify receipt documents
+- `correspondents`: Filter by specific correspondents (optional)
+
+#### [bigcapital]
+- `url`: Bigcapital instance URL
+- `token`: API token for Bigcapital
+- `auto_create_customers`: Automatically create customers if they don't exist
+- `default_due_days`: Default days to add to invoice date for due date
+
+#### [database]
+- `host`: PostgreSQL host
+- `port`: PostgreSQL port
+- `name`: Database name
+- `user`: Database user
+- `password`: Database password
+- `pool_size`: Connection pool size
+- `max_overflow`: Maximum connection overflow
+- `pool_timeout`: Connection timeout (seconds)
+- `pool_recycle`: Connection recycle time (seconds)
+
+#### [processing]
+- `processed_tag`: Tag applied to successfully processed documents
+- `error_tag`: Tag applied to documents with processing errors
+- `check_interval`: How often to check for new documents (seconds)
+- `log_level`: Logging level (DEBUG, INFO, WARNING, ERROR)
+- `batch_size`: Number of documents to process in each batch
+- `max_retries`: Maximum retry attempts for failed processing
+- `retry_delay`: Delay between retry attempts (seconds)
+
+#### [web_interface]
+- `host`: Web interface host (0.0.0.0 for Docker)
+- `port`: Web interface port
+- `secret_key`: Flask secret key for sessions
+- `debug`: Enable debug mode (development only)
+
+## Database Schema
+
+The middleware creates several tables to store extracted data:
+
+- **documents**: Document metadata from Paperless-NGX
+- **extracted_data**: Extracted invoice/receipt data
+- **line_items**: Individual line items from invoices
+- **processing_logs**: Processing history and errors
+
+## API Endpoints
+
+The middleware provides a web interface with the following endpoints:
+
+- `GET /`: Dashboard with processing statistics
+- `GET /health`: Health check endpoint
+- `GET /api/stats`: Processing statistics (JSON)
+- `GET /api/documents`: List processed documents
+- `POST /api/process`: Trigger manual processing
+
+## Monitoring and Troubleshooting
+
+### View Logs
+
+```bash
+# Docker logs
+docker-compose logs -f paperless-bigcapital-middleware
+
+# Local logs
+tail -f logs/middleware.log
+```
+
+### Database Queries
+
+```bash
+# Connect to database
+docker-compose exec db psql -U middleware_user -d middleware_db
+
+# Check processing status
+SELECT status, COUNT(*) FROM documents GROUP BY status;
+
+# View recent documents
+SELECT * FROM documents ORDER BY added_date DESC LIMIT 10;
+```
 
 ### Common Issues
 
-**API Connection Errors**:
-- Verify API URLs are accessible
-- Check API tokens are valid
-- Ensure network connectivity between services
+1. **Database Connection Failed**
+   - Check PostgreSQL is running: `docker-compose ps`
+   - Verify database credentials in config/env files
+   - Check network connectivity
 
-**No Documents Processed**:
-- Verify tags are correctly configured
-- Check if documents already have processing tags
-- Review log files for errors
+2. **API Authentication Errors**
+   - Verify API tokens in configuration
+   - Check service URLs are accessible
+   - Confirm API permissions
 
-**Data Extraction Issues**:
-- Check OCR quality in Paperless-NGX
-- Review document format and content
-- Modify extraction patterns if needed
+3. **Document Processing Stuck**
+   - Check document tags match configuration
+   - Review processing logs for errors
+   - Verify Paperless-NGX document access
 
-**Customer Creation Failures**:
-- Verify Bigcapital API permissions
-- Check customer data format requirements
-- Review duplicate customer handling
+## Updating
 
-### Debug Mode
+### Update Docker Images
 
-Enable debug logging in `config.ini`:
-```ini
-[processing]
-log_level = DEBUG
+```bash
+# Pull latest images
+docker-compose pull
+
+# Rebuild and restart
+docker-compose up -d --build
 ```
 
-### Manual Processing
+### Update Database Schema
 
-To process specific documents:
-1. Remove existing processing tags from the document
-2. Ensure correct identification tags are present
-3. Run middleware with `--once` flag
+```bash
+# Add new SQL files to db/ directory
+# Restart services to apply changes
+docker-compose restart paperless-bigcapital-middleware
+```
 
-## Security Considerations
+## Backup and Restore
 
-- Store API tokens securely (use environment variables in production)
-- Restrict API token permissions to minimum required
-- Use HTTPS for all API communications
-- Regularly rotate API tokens
-- Monitor access logs
+### Database Backup
+
+```bash
+# Create backup
+docker-compose exec db pg_dump -U middleware_user middleware_db > backup.sql
+
+# Restore backup
+docker-compose exec -T db psql -U middleware_user middleware_db < backup.sql
+```
+
+### Configuration Backup
+
+```bash
+# Backup configuration
+cp config.ini config.ini.backup
+cp .env .env.backup
+```
 
 ## Contributing
 
-To extend the middleware:
-
-1. **Add new document types**: Extend `DocumentProcessor` class
-2. **Improve extraction**: Add regex patterns or use ML-based extraction
-3. **Add integrations**: Create new client classes for other accounting systems
-4. **Enhance error handling**: Add retry mechanisms and better error recovery
-
-## API Reference
-
-### Paperless-NGX API Endpoints Used
-- `/api/documents/` - List and filter documents
-- `/api/documents/{id}/` - Get document details and content
-- `/api/tags/` - Manage tags
-- `/api/correspondents/` - Manage correspondents
-
-### Bigcapital API Endpoints Used
-- `/api/customers` - Customer management
-- `/api/invoices` - Invoice creation
-- `/api/receipts` - Receipt creation
-
-## Changelog
-
-### v1.0.0
-- Initial release
-- Basic invoice and receipt processing
-- Docker support
-- Configuration management
-- Error handling and logging
-
-## License
-
-This middleware is provided as-is for integration between Paperless-NGX and Bigcapital. Please ensure compliance with both systems' terms of service.
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
 
 ## Support
 
 For issues and questions:
-1. Check the troubleshooting section
-2. Review log files for error details
-3. Verify configuration settings
-4. Test API connectivity manually
+1. Check the logs for error messages
+2. Review the configuration settings
+3. Test database and API connectivity
+4. Create an issue with detailed information
+
+## License
+GPL
