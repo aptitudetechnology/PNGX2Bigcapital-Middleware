@@ -1,3 +1,26 @@
+
+#  1. Current State: You have a middleware UI with a documents table showing invoices/receipts with basic info (ID, Type, Customer, Amount, Status, Date)
+#  2. Goal: Allow users to click on documents to edit them in a new window where they can:
+#   * View the actual document (PDF/image)
+#   * Change document type (Invoice, Invoice AR, Receipt)
+#   * Select Bigcapital account codes
+#   * Save changes
+#  3. Architecture Decision:
+#   * Make table rows clickable links to /document/edit/{document_id}
+#   * Open in new window/tab (not modal)
+#   * Server-side Python script renders the document editor page
+#   * Keeps main UI simple, separates concerns
+#   4. Database:
+#   * SQLite for testing (simple, file-based)
+#
+#    Implementation:
+#        Modify existing documents table to be clickable
+#        Create new Python route for document editing
+#        Build document editor page with viewer + form
+#        Handle save/update functionality
+
+
+
 import sqlite3
 import os
 from datetime import datetime
@@ -321,7 +344,6 @@ def get_logs():
     conn.close()
     return jsonify(logs)
 
-#backend document editor
 
 # Socket.IO events
 @socketio.on('connect')
