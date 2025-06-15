@@ -5,3 +5,7 @@ python-socketio==5.9.0
 python-engineio==4.7.1
 configparser==6.0.0
 pathlib2==2.3.7
+psycopg2==2.9.7
+SQLAlchemy==2.0.23
+alembic==1.13.1
+python-dateutil==2.8.2
