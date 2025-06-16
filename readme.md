@@ -24,6 +24,87 @@ A middleware service that extracts data from documents in Paperless-NGX and sync
 - 📊 Processing statistics and error tracking
 - 🔗 Seamless Bigcapital integration 
 
+
+# Folder Structure
+
+```
+paperless-bigcapital-middleware/
+├── config/
+│   ├── __init__.py
+│   ├── settings.py          # Centralized configuration management
+│   └── config.ini.example   # Template configuration file
+├── core/
+│   ├── __init__.py
+│   ├── paperless_client.py  # Paperless-NGX API client
+│   ├── bigcapital_client.py # BigCapital API client
+│   └── processor.py         # Main processing logic
+├── database/
+│   ├── __init__.py
+│   ├── models.py           # SQLAlchemy models
+│   ├── connection.py       # Database connection management
+│   └── migrations/         # Database schema files
+│       └── 001_initial.sql
+├── web/
+│   ├── __init__.py
+│   ├── app.py             # Flask application
+│   ├── routes.py          # API endpoints and web routes
+│   └── static/            # Static web assets
+│       ├── css/
+│       │   └── style.css
+│       └── js/
+├── utils/
+│   ├── __init__.py
+│   ├── logger.py          # Logging configuration
+│   └── exceptions.py      # Custom exception classes
+├── tests/
+│   ├── __init__.py
+│   ├── test_core.py       # Core functionality tests
+│   ├── test_clients.py    # API client tests
+│   └── test_database.py   # Database tests
+├── docker/
+│   ├── Dockerfile
+│   └── docker-compose.yml
+├── scripts/
+│   ├── init.sh           # Database initialization script
+│   └── run.sh            # Application startup script
+├── logs/                 # Application logs (created at runtime)
+├── requirements.txt      # Python dependencies
+├── config.ini           # Main configuration file
+├── .env.example         # Environment variables template
+├── .gitignore
+└── README.md
+```
+
+## Directory Descriptions
+
+### `/config/`
+Configuration management and settings files.
+
+### `/core/`
+Core business logic and API client implementations.
+
+### `/database/`
+Database models, connections, and migration scripts.
+
+### `/web/`
+Web interface and API endpoints using Flask.
+
+### `/utils/`
+Utility functions, logging, and custom exceptions.
+
+### `/tests/`
+Unit tests and integration tests.
+
+### `/docker/`
+Docker configuration files for containerized deployment.
+
+### `/scripts/`
+Shell scripts for initialization and deployment.
+
+### `/logs/`
+Application log files (created automatically).
+
+
 ## Architecture
 
 ```
